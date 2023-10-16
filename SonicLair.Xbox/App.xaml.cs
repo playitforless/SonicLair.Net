@@ -30,6 +30,10 @@ namespace SonicLairXbox
         {
             this.InitializeComponent();
             this.Suspending += OnSuspending;
+
+            this.EnteredBackground += App_EnteredBackground;
+            this.LeavingBackground += App_LeavingBackground;
+            
             this.RequiresPointerMode = Windows.UI.Xaml.ApplicationRequiresPointerMode.WhenRequested;
             Container = ConfigureDependencyInjection();
             Observers = new List<INotificationObserver>();
