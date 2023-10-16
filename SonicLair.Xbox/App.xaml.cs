@@ -42,6 +42,17 @@ namespace SonicLairXbox
             IMusicPlayerService musicService = Container.GetService<IMusicPlayerService>();
             musicService.SetNotifier(this);
         }
+        
+        private void App_EnteredBackground(object sender, EnteredBackgroundEventArgs e)
+        {
+            _isInBackgroundMode = true;
+        }
+        
+        private void App_LeavingBackground(object sender, LeavingBackgroundEventArgs e)
+        {
+            _isInBackgroundMode = false;
+        }
+        
         private readonly WebSocketService WebSocketService;
         public IServiceProvider Container { get; }
         public List<INotificationObserver> Observers { get; set; }
