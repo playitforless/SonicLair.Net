@@ -1,4 +1,4 @@
-﻿using LibVLCSharp.Shared;
+using LibVLCSharp.Shared;
 
 using NStack;
 
@@ -37,7 +37,7 @@ namespace SonicLairCli
             {
                 _ = ArtistsView();
             });
-            
+
         }
 
         private FrameView GetCurrentPlaylist(View anchorLeft)
@@ -107,7 +107,7 @@ namespace SonicLairCli
                 Height = 2,
                 Width = Dim.Fill(),
                 CanFocus = false,
-                Text = "C-a Artists | C-l Album | C-p Playlists | C-r Search | C-j Jukebox" +
+                Text = "C-a Artists | C-l Album | C-p Playlists | C-r Search | C-j Jukebox | C-Right Fw(10s) | C-Left Bw(10s)" +
                 "\nC-c Quit | C-h Play/Pause | C-b Prev | C-n Next | C-s Shuffle | C-m Add | C-o Back",
             };
             return ret;
@@ -147,7 +147,7 @@ namespace SonicLairCli
                 Width = Dim.Fill() - 10,
                 Height = 1,
                 ProgressBarFormat = ProgressBarFormat.SimplePlusPercentage,
-                ProgressBarStyle = ProgressBarStyle.Continuous,
+                ProgressBarStyle = ProgressBarStyle.Blocks,
                 CanFocus = false,
                 ColorScheme = new ColorScheme()
                 {
@@ -287,7 +287,16 @@ namespace SonicLairCli
                 {
                     return;
                 }
+                var cancellationTokenSource = new CancellationTokenSource();
+                SonicLairControls.AnimateTextView(searchLabel, new[]{
+                    "[Search/]",
+                    "[Search-]",
+                    "[Search\\]",
+                    "[Search|]",
+                }, 800, cancellationTokenSource.Token);
                 var ret = await _subsonicService!.Search(value.ToString(), 100);
+                cancellationTokenSource.Cancel();
+                searchLabel.Text = "[Search:]";
                 Application.MainLoop.Invoke((Action)(() =>
                 {
                     if (ret.Artists != null && ret.Artists.Any<Artist>())
@@ -412,7 +421,8 @@ namespace SonicLairCli
             var maxAlbums = artists.Max(s => s.AlbumCount.ToString().Length);
             listView.Source = new SonicLairDataSource<Artist>(artists, (a) =>
             {
-                return $"{a.ToString().PadRight(max, ' ')} {a.AlbumCount.ToString().PadLeft(maxAlbums, ' ')} Albums";
+                var tag = a.AlbumCount > 1 ? "Albums" : "Album";
+                return $"{a.ToString().PadRight(max, ' ')} {a.AlbumCount.ToString().PadLeft(maxAlbums, ' ')} {tag}";
             });
             listView.OpenSelectedItem += ArtistsView_Selected;
             mainView.Add(listView);
@@ -604,19 +614,19 @@ namespace SonicLairCli
         public void Load()
         {
             var account = Statics.GetActiveAccount();
-            if(_subsonicService == null)
+            if (_subsonicService == null)
             {
                 _subsonicService = new SubsonicService();
                 _subsonicService.Configure(account);
             }
-            if(_musicPlayerService == null)
+            if (_musicPlayerService == null)
             {
                 _musicPlayerService = new MusicPlayerService(_subsonicService);
                 _musicPlayerService.RegisterCurrentStateHandler(CurrentStateHandler);
                 _musicPlayerService.RegisterTimeChangedHandler(PlayingTimeHandler);
                 _musicPlayerService.RegisterPlayerVolumeHandler(PlayerVolumeHandler);
             }
-            if(_messageServer == null)
+            if (_messageServer == null)
             {
                 try
                 {
@@ -709,6 +719,23 @@ namespace SonicLairCli
             window.RegisterHotKey(Key.O | Key.CtrlMask, () =>
             {
                 _history.GoBack();
+            });
+            window.RegisterHotKey(Key.CursorRight | Key.CtrlMask, () =>
+            {
+                if (_musicPlayerService.GetCurrentState().IsPlaying)
+                {
+                    var newPosition = 10f / _musicPlayerService!.GetCurrentState().CurrentTrack.Duration;
+                    _musicPlayerService.Seek(newPosition, true);
+                }
+            });
+            window.RegisterHotKey(Key.CursorLeft | Key.CtrlMask, () =>
+            {
+                if (_musicPlayerService.GetCurrentState().IsPlaying)
+                {
+                    var newPosition = 10f / _musicPlayerService!.GetCurrentState().CurrentTrack.Duration;
+                    _musicPlayerService.Seek(-newPosition, true);
+                    
+                }
             });
         }
     }
