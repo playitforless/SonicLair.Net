@@ -340,14 +340,6 @@
     <VisualStudioVersion>14.0</VisualStudioVersion>
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
-  <!--
-    VideoLAN.LibVLC.UWP's own .targets file injects an SDKReference to the
-    long-retired "Microsoft.VCLibs, Version=12.0" (VS2013/v120) extension SDK.
-    That component isn't shipped by modern Visual Studio/CI images and isn't
-    actually required at runtime by the current native LibVLC binaries -- it's
-    a stale leftover in the package's metadata. Strip it before
-    ResolveSDKReferences runs so the build doesn't fail with MSB3774.
-  -->
   <Target Name="RemoveStaleVCLibs120SdkReference" BeforeTargets="ResolveSDKReferences">
     <ItemGroup>
       <SDKReference Remove="@(SDKReference)" Condition="$([System.String]::Copy('%(SDKReference.Identity)').ToLower().Contains('vclibs.120')) Or $([System.String]::Copy('%(SDKReference.Identity)').ToLower().Contains('vclibs, version=12.0'))" />
