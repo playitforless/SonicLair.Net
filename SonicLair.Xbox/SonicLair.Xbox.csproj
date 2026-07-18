@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -340,6 +340,19 @@
     <VisualStudioVersion>14.0</VisualStudioVersion>
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
+  <!--
+    VideoLAN.LibVLC.UWP's own .targets file injects an SDKReference to the
+    long-retired "Microsoft.VCLibs, Version=12.0" (VS2013/v120) extension SDK.
+    That component isn't shipped by modern Visual Studio/CI images and isn't
+    actually required at runtime by the current native LibVLC binaries -- it's
+    a stale leftover in the package's metadata. Strip it before
+    ResolveSDKReferences runs so the build doesn't fail with MSB3774.
+  -->
+  <Target Name="RemoveStaleVCLibs120SdkReference" BeforeTargets="ResolveSDKReferences">
+    <ItemGroup>
+      <SDKReference Remove="@(SDKReference)" Condition="$([System.String]::Copy('%(SDKReference.Identity)').ToLower().Contains('vclibs.120')) Or $([System.String]::Copy('%(SDKReference.Identity)').ToLower().Contains('vclibs, version=12.0'))" />
+    </ItemGroup>
+  </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
