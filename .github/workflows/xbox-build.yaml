@@ -1,0 +1,63 @@
+name: Build Xbox (UWP)
+
+# Manually triggered from the Actions tab, or on pushes that touch the
+# Xbox/Lib projects. Adjust the `on:` block to taste.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "SonicLair.Xbox/**"
+      - "SonicLair.Lib/**"
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
+
+      - name: Restore NuGet packages
+        run: nuget restore SonicLair.Net.sln
+
+      # The signing cert is NOT stored in the repo (there is none checked in
+      # upstream). You generate your own once and store it as a base64
+      # secret -- see SIGNING_SETUP.md for exact steps.
+      - name: Write signing certificate to disk
+        shell: pwsh
+        run: |
+          $bytes = [Convert]::FromBase64String("${{ secrets.SONICLAIR_PFX_BASE64 }}")
+          [IO.File]::WriteAllBytes("SonicLair.Xbox/SigningCert.pfx", $bytes)
+
+      - name: Build & package (x64, sideload-only)
+        run: >
+          msbuild SonicLair.Xbox/SonicLair.Xbox.csproj
+          /p:Configuration=Release
+          /p:Platform=x64
+          /p:AppxBundle=Always
+          /p:AppxBundlePlatforms=x64
+          /p:UapAppxPackageBuildMode=SideloadOnly
+          /p:AppxPackageDir=AppPackages\
+          /p:PackageCertificateKeyFile=SigningCert.pfx
+          /p:PackageCertificatePassword=${{ secrets.SONICLAIR_PFX_PASSWORD }}
+          /restore
+
+      - name: Remove certificate from workspace
+        if: always()
+        shell: pwsh
+        run: Remove-Item -Path "SonicLair.Xbox/SigningCert.pfx" -ErrorAction SilentlyContinue
+
+      - name: Upload appx package as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SonicLair-Xbox-appxbundle
+          path: SonicLair.Xbox/AppPackages/**
+          retention-days: 30
